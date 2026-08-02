@@ -153,7 +153,7 @@ button:active { background: #1d4ed8; }
 }
 .stat-label {
     font-size: 9px;
-    color: #506070;
+    color: #a0b0c8;
     text-transform: uppercase;
     letter-spacing: .8px;
 }
@@ -474,8 +474,8 @@ function geo() {
 // Returns boat speed in mph using iterative apparent-wind convergence.
 // boardAngle: 0=crosswind, +90=dead upwind, -90=dead downwind
 // TWA (true wind angle from dead upwind): 90° - boardAngle
-function calcSpeed() {
-    const twa_deg = 90 - S.boardAngle;
+function calcSpeed(boardAngleDeg = S.boardAngle) {
+    const twa_deg = 90 - boardAngleDeg;
 
     // Hard numerical guard only — the iterative solver's F_drive ≤ 0 check
     // produces the natural speed taper as TWA tightens. The real no-go boundary
@@ -544,8 +544,8 @@ function calcSpeed() {
 }
 
 // VMG: component of boat velocity pointing dead upwind (positive = making upwind progress)
-function calcVMG(speedKts) {
-    return speedKts * Math.sin(S.boardAngle * Math.PI / 180);
+function calcVMG(speedKts, boardAngleDeg = S.boardAngle) {
+    return speedKts * Math.sin(boardAngleDeg * Math.PI / 180);
 }
 
 // ─────────────────────────────────────────────
@@ -710,6 +710,7 @@ function draw(g) {
     drawProjected(g);
     drawBoard(g);
     drawLand(g);
+    drawPerfChart(g);
     drawHUD(g);
 }
 
@@ -744,6 +745,172 @@ function drawLand(g) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('⚓ LAUNCH / LAND', g.W / 2, g.waterH + g.landH / 2);
+}
+
+// Performance chart: Speed & VMG vs. Angle of Attack, overlaid near the shore.
+// Sampled fresh each frame from the same calcSpeed()/calcVMG() physics used
+// for the live board, so the curves always reflect current wind/rig settings.
+const CHART_MIN_ANGLE = 5, CHART_MAX_ANGLE = 85, CHART_STEP = 2;
+
+function drawPerfChart(g) {
+    const angles = [], speeds = [], vmgs = [];
+    let maxSpeed = 0, maxVmg = 0;
+    for (let a = CHART_MIN_ANGLE; a <= CHART_MAX_ANGLE; a += CHART_STEP) {
+        const spd = calcSpeed(a);
+        const vmg = calcVMG(spd, a);
+        angles.push(a);
+        speeds.push(spd);
+        vmgs.push(vmg);
+        if (spd > maxSpeed) maxSpeed = spd;
+        if (vmg > maxVmg)   maxVmg   = vmg;
+    }
+    maxSpeed = Math.max(maxSpeed, 1);
+    maxVmg   = Math.max(maxVmg, 1);
+
+    // Chart box: overlaid on the shore strip, dipping slightly into the water
+    // so there's enough room to read the curves.
+    const cw = Math.min(572, g.W - 24);
+    const ch = Math.min(150, Math.max(100, g.landH + g.landH * 1.4));
+    const cx0 = 12;
+    const cy0 = g.H - ch - 6;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(4,10,18,0.78)';
+    ctx.beginPath();
+    ctx.roundRect(cx0, cy0, cw, ch, 8);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    const padL = 30, padR = 30, padT = 22, padB = 20;
+    const plotX = cx0 + padL, plotY = cy0 + padT;
+    const plotW = cw - padL - padR, plotH = ch - padT - padB;
+
+    const xOf     = a => plotX + (a - CHART_MIN_ANGLE) / (CHART_MAX_ANGLE - CHART_MIN_ANGLE) * plotW;
+    const ySpeed  = s => plotY + plotH - (s / maxSpeed) * plotH;
+    const yVmg    = v => plotY + plotH - (Math.max(0, v) / maxVmg) * plotH;
+
+    // Title
+    ctx.fillStyle    = '#c0ccdc';
+    ctx.font         = 'bold 9px sans-serif';
+    ctx.textAlign    = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('SPEED & VMG vs. ANGLE OF ATTACK', cx0 + 10, cy0 + 13);
+
+    // Axes
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(plotX, plotY);
+    ctx.lineTo(plotX, plotY + plotH);
+    ctx.lineTo(plotX + plotW, plotY + plotH);
+    ctx.stroke();
+
+    // X-axis gridlines + tick labels (angle of attack, every 10°)
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'top';
+    for (let a = 10; a < CHART_MAX_ANGLE; a += 10) {
+        const x = xOf(a);
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, plotY);
+        ctx.lineTo(x, plotY + plotH);
+        ctx.stroke();
+        ctx.fillStyle = '#b0bcd0';
+        ctx.font = '8px sans-serif';
+        ctx.fillText(`${a}°`, x, plotY + plotH + 3);
+    }
+    ctx.fillStyle = '#b0bcd0';
+    ctx.font = '8px sans-serif';
+    ctx.fillText(`${CHART_MIN_ANGLE}°`, xOf(CHART_MIN_ANGLE), plotY + plotH + 3);
+    ctx.fillText(`${CHART_MAX_ANGLE}°`, xOf(CHART_MAX_ANGLE), plotY + plotH + 3);
+
+    // Speed curve (right axis, orange)
+    ctx.strokeStyle = '#ffa040';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    angles.forEach((a, i) => {
+        const x = xOf(a), y = ySpeed(speeds[i]);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // VMG curve (left axis, teal)
+    ctx.strokeStyle = '#4ecdc4';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    angles.forEach((a, i) => {
+        const x = xOf(a), y = yVmg(vmgs[i]);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Y-axis gridlines + scale labels (VMG on left, Speed on right), 4 divisions
+    ctx.font = '8px sans-serif';
+    for (let f = 0; f <= 1.001; f += 0.25) {
+        const y = plotY + plotH - f * plotH;
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(plotX, y);
+        ctx.lineTo(plotX + plotW, y);
+        ctx.stroke();
+
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#4ecdc4';
+        ctx.fillText((maxVmg * f).toFixed(0), plotX - 4, y);
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#ffa040';
+        ctx.fillText((maxSpeed * f).toFixed(0), plotX + plotW + 4, y);
+    }
+
+    // Current-position markers: where the live boardAngle sits on each curve
+    const curAngle = Math.min(CHART_MAX_ANGLE, Math.max(CHART_MIN_ANGLE, Math.abs(S.boardAngle)));
+    const curSpeed = S.boatSpeed;
+    const curVmg   = Math.max(0, S.vmg);
+    const mx = xOf(curAngle);
+
+    // Speed marker: "x"
+    const sy = ySpeed(curSpeed);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(mx - 5, sy - 5); ctx.lineTo(mx + 5, sy + 5);
+    ctx.moveTo(mx + 5, sy - 5); ctx.lineTo(mx - 5, sy + 5);
+    ctx.stroke();
+
+    // VMG marker: filled dot
+    const vy = yVmg(curVmg);
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(mx, vy, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#4ecdc4';
+    ctx.beginPath();
+    ctx.arc(mx, vy, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Legend
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#ffa040';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx0 + cw - 118, cy0 + 12); ctx.lineTo(cx0 + cw - 104, cy0 + 12); ctx.stroke();
+    ctx.fillStyle = '#ffa040';
+    ctx.fillText('Speed', cx0 + cw - 100, cy0 + 12);
+
+    ctx.strokeStyle = '#4ecdc4';
+    ctx.beginPath(); ctx.moveTo(cx0 + cw - 60, cy0 + 12); ctx.lineTo(cx0 + cw - 46, cy0 + 12); ctx.stroke();
+    ctx.fillStyle = '#4ecdc4';
+    ctx.fillText('VMG', cx0 + cw - 42, cy0 + 12);
+
+    ctx.restore();
 }
 
 function drawParticles(g) {
@@ -1025,7 +1192,7 @@ function drawHUD(g) {
     ctx.font      = 'bold 24px sans-serif';
     ctx.fillText(`${S.boardAngle >= 0 ? '+' : ''}${S.boardAngle.toFixed(0)}°`, bx + 8, by + 22);
 
-    ctx.fillStyle = '#7090b0';
+    ctx.fillStyle = '#a8c0dc';
     ctx.font      = '10px sans-serif';
     const twa     = (90 - S.boardAngle).toFixed(0);
     ctx.fillText(`TWA from upwind: ${twa}°`, bx + 8, by + 50);
