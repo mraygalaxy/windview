@@ -2,6 +2,8 @@
 
 A self-contained browser app for visualizing and learning the fundamentals of wind-powered water sports. Open `windview.html` in any modern browser — no installation, no internet required.
 
+**🌐 [Live demo](https://mraygalaxy.github.io/windview/windview.html)**
+
 ---
 
 ## Who this is for
@@ -26,7 +28,7 @@ Imagine a clock face lying flat on the surface of the water. The wind always blo
 
 Your board can reach almost any direction — **but not straight into the wind**. There is a "no-go zone" of roughly 38° on either side of 12 o'clock where the wind cannot push you forward no matter what you do.
 
-<img width="1665" height="959" alt="image" src="https://github.com/user-attachments/assets/3ed140f6-ebf2-4aed-88b1-9913313db688" />
+<a href="https://mraygalaxy.github.io/windview/windview.html"><img width="1665" height="959" alt="image" src="https://github.com/user-attachments/assets/3ed140f6-ebf2-4aed-88b1-9913313db688" /></a>
 
 
 ### Going upwind
