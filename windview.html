@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WindView – Wind Sports Simulator</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #0d1b2a;
+    color: #d0d8e8;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#canvas-container {
+    flex: 1;
+    position: relative;
+    min-width: 0;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* ── Right panel ── */
+#controls {
+    width: 330px;
+    min-width: 330px;
+    background: #111c2e;
+    border-left: 1px solid #1e3a5f;
+    padding: 12px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.panel-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #4ecdc4;
+    text-align: center;
+    border-bottom: 1px solid #1e3a5f;
+    padding-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.ctrl-group {
+    background: #0d1f35;
+    border: 1px solid #1e3a5f;
+    border-radius: 7px;
+    padding: 8px 10px;
+}
+
+.ctrl-group h3 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #4ecdc4;
+    margin-bottom: 6px;
+}
+
+/* Two-column grid for compact input pairs */
+.input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px 8px;
+}
+.input-grid .ctrl-row { margin-bottom: 0; }
+
+/* Toggle-style active button */
+button.btn-active {
+    background: #0e6ea8;
+    border-color: #4ecdc4;
+    color: #fff;
+}
+button.btn-active:hover { background: #1090d0; }
+
+.ctrl-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+.ctrl-row:last-child { margin-bottom: 0; }
+
+.ctrl-label {
+    font-size: 11px;
+    color: #8090a8;
+}
+
+.ctrl-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    min-width: 56px;
+    text-align: right;
+}
+
+.btn-row {
+    display: flex;
+    gap: 3px;
+}
+
+button {
+    background: #1a3a6a;
+    color: #c8d8f0;
+    border: 1px solid #2a5aa0;
+    border-radius: 4px;
+    padding: 3px 9px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.12s;
+    white-space: nowrap;
+}
+button:hover { background: #2563eb; color: #fff; }
+button:active { background: #1d4ed8; }
+
+.btn-primary {
+    background: #0a7eb4;
+    border-color: #38bdf8;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    width: 100%;
+    border-radius: 5px;
+}
+.btn-primary:hover { background: #38bdf8; color: #000; }
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+}
+
+.stat-box {
+    background: #070f1a;
+    border-radius: 5px;
+    padding: 6px 4px;
+    text-align: center;
+}
+.stat-num {
+    font-size: 20px;
+    font-weight: 700;
+    color: #4ecdc4;
+    line-height: 1.1;
+}
+.stat-label {
+    font-size: 9px;
+    color: #506070;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+}
+.stat-sub {
+    font-size: 9px;
+    color: #607080;
+    text-align: center;
+    margin-top: 3px;
+}
+
+input[type="number"] {
+    background: #070f1a;
+    color: #e0e8f8;
+    border: 1px solid #2a5aa0;
+    border-radius: 4px;
+    padding: 3px 5px;
+    width: 68px;
+    font-size: 12px;
+    text-align: right;
+}
+input[type="range"] {
+    width: 100%;
+    accent-color: #4ecdc4;
+    margin-top: 3px;
+}
+input[type="text"] {
+    background: #070f1a;
+    color: #e0e8f8;
+    border: 1px solid #2a5aa0;
+    border-radius: 4px;
+    padding: 4px 7px;
+    width: 100%;
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+input[type="checkbox"] {
+    accent-color: #4ecdc4;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+label { cursor: pointer; font-size: 12px; }
+
+.chk-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 6px;
+}
+
+#stopped-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,.78);
+    color: #f87171;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 20px;
+    font-weight: 700;
+    display: none;
+    text-align: center;
+    pointer-events: none;
+}
+#stopped-overlay span {
+    display: block;
+    font-size: 12px;
+    color: #a0b0c0;
+    margin-top: 4px;
+    font-weight: 400;
+}
+
+.footer-note {
+    font-size: 9px;
+    color: #303848;
+    text-align: center;
+    margin-top: auto;
+    padding-top: 4px;
+}
+</style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="windCanvas"></canvas>
+    <div id="stopped-overlay">
+        Simulation Stopped
+        <span id="stopped-reason">Board reached boundary</span>
+    </div>
+</div>
+
+<div id="controls">
+    <div class="panel-title">⛵ WINDVIEW</div>
+
+    <!-- Play / Pause -->
+    <button class="btn-primary" id="playPauseBtn" onclick="togglePlay()">▶&nbsp; Play</button>
+
+    <!-- Performance Stats -->
+    <div class="ctrl-group">
+        <h3>Performance</h3>
+        <div class="stat-grid">
+            <div class="stat-box">
+                <div class="stat-num" id="speedDisp">0.0</div>
+                <div class="stat-label">Speed (mph)</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-num" id="vmgDisp">0.0</div>
+                <div class="stat-label">VMG (mph)</div>
+            </div>
+        </div>
+        <div class="stat-sub">VMG = upwind progress speed</div>
+    </div>
+
+    <!-- Wind Clock Rotation -->
+    <div class="ctrl-group">
+        <h3>Wind Direction (Clock Rotation)</h3>
+        <div class="ctrl-row">
+            <div class="btn-row">
+                <button onclick="adjustWind(-15)">◀ 15°</button>
+                <button onclick="adjustWind(-5)">◀ 5°</button>
+                <button onclick="adjustWind(5)">5° ▶</button>
+                <button onclick="adjustWind(15)">15° ▶</button>
+            </div>
+        </div>
+        <div class="ctrl-row" style="margin-top:4px">
+            <span class="ctrl-label">Clock shifted</span>
+            <span class="ctrl-val" id="windAngleDisp">0°</span>
+        </div>
+    </div>
+
+    <!-- Angle of Attack -->
+    <div class="ctrl-group">
+        <h3>Angle of Attack</h3>
+        <div class="ctrl-row">
+            <div class="btn-row">
+                <button onclick="adjustAngle(-10)">– 10°</button>
+                <button onclick="adjustAngle(-5)">– 5°</button>
+                <button onclick="adjustAngle(5)">+ 5°</button>
+                <button onclick="adjustAngle(10)">+ 10°</button>
+            </div>
+        </div>
+        <div class="ctrl-row" style="margin-top:4px">
+            <span class="ctrl-label">From crosswind (3/9 axis)</span>
+            <span class="ctrl-val" id="boardAngleDisp">+45°</span>
+        </div>
+        <div class="ctrl-row">
+            <span class="ctrl-label">Clock heading (port / stbd)</span>
+            <span class="ctrl-val" id="clockPosDisp">10:30 / 1:30</span>
+        </div>
+    </div>
+
+    <!-- Lane & Launch Direction -->
+    <div class="ctrl-group">
+        <h3>Lane &amp; Launch Direction</h3>
+        <div class="ctrl-row">
+            <div class="btn-row">
+                <button onclick="adjustSpacing(-0.15)">– 15%</button>
+                <button onclick="adjustSpacing(-0.05)">– 5%</button>
+                <button onclick="adjustSpacing(0.05)">+ 5%</button>
+                <button onclick="adjustSpacing(0.15)">+ 15%</button>
+            </div>
+        </div>
+        <div class="ctrl-row" style="margin-top:4px">
+            <span class="ctrl-label">Lane / clock size</span>
+            <span class="ctrl-val" id="spacingDisp">100%</span>
+        </div>
+        <div class="ctrl-row" style="margin-top:4px">
+            <span class="ctrl-label">Launch tack</span>
+            <div class="btn-row">
+                <button id="tackPortBtn" onclick="setLaunchTack(-1)">← Port (9)</button>
+                <button id="tackStbdBtn" class="btn-active" onclick="setLaunchTack(1)">Stbd (3) →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wind Speed -->
+    <div class="ctrl-group">
+        <h3>Wind Speed</h3>
+        <div class="ctrl-row">
+            <span class="ctrl-label">Speed (mph)</span>
+            <input type="number" id="windSpeedInput" value="15" min="1" max="100"
+                   onchange="syncWindSpeed(this.value)">
+        </div>
+        <input type="range" id="windSpeedSlider" min="1" max="100" value="15"
+               oninput="syncWindSpeed(this.value)">
+    </div>
+
+    <!-- Board Setup -->
+    <div class="ctrl-group">
+        <h3>Board Setup</h3>
+        <div class="chk-row" style="margin-bottom:7px">
+            <input type="checkbox" id="foilingChk" checked onchange="updateSetup()">
+            <label for="foilingChk">Hydrofoiling mode</label>
+        </div>
+        <div class="input-grid">
+            <div class="ctrl-row">
+                <span class="ctrl-label">Wing (m²)</span>
+                <input type="number" id="wingAreaInput" value="6.0" min="1" max="15" step="0.5"
+                       onchange="updateSetup()">
+            </div>
+            <div class="ctrl-row">
+                <span class="ctrl-label">Weight (lbs)</span>
+                <input type="number" id="riderWeightInput" value="200" min="50" max="400"
+                       onchange="updateSetup()">
+            </div>
+            <div id="foilRow" class="ctrl-row">
+                <span class="ctrl-label">Foil (cm²)</span>
+                <input type="number" id="foilAreaInput" value="1500" min="200" max="3000" step="50"
+                       onchange="updateSetup()">
+            </div>
+            <div id="boardRow" class="ctrl-row" style="display:none">
+                <span class="ctrl-label">Board (L)</span>
+                <input type="number" id="boardVolInput" value="100" min="20" max="200" step="5"
+                       onchange="updateSetup()">
+            </div>
+        </div>
+    </div>
+
+    <!-- Simulation Profile -->
+    <div class="ctrl-group">
+        <h3>Simulation Profile</h3>
+        <input type="text" id="simNameInput" placeholder="Location name…" value="My Location">
+        <div style="display:flex; gap:5px">
+            <button class="btn-primary" onclick="exportSim()" style="flex:1">
+                ⬇ Export
+            </button>
+            <button class="btn-primary" onclick="document.getElementById('importFile').click()" style="flex:1">
+                ⬆ Import
+            </button>
+        </div>
+        <input type="file" id="importFile" accept=".json" style="display:none"
+               onchange="importSim(this)">
+    </div>
+
+    <div class="footer-note">WindView v1.0 — Wind Sports Simulator</div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+const S = {
+    playing:      false,
+    stopped:      false,
+    windAngle:    0,       // degrees: clockwise rotation of the wind clock
+    boardAngle:   45,      // degrees: 0=crosswind, +90=dead upwind, -90=dead downwind
+    spacing:      1.0,     // multiplier on clockR for half-lane width (1.0 = lines at clock edge)
+    windSpeed:    15,      // mph
+    isForiling:   true,
+    wingArea:     6.0,     // m²
+    riderWeight:  200,     // lbs
+    foilArea:     1500,    // cm²
+    boardVolume:  100,     // liters
+
+    launchTack:   1,       // +1 = starboard (toward 3), -1 = port (toward 9)
+    board: { x: 0, y: 0, tack: 1 },
+    boatSpeed: 0,
+    vmg:       0,
+
+    particles:   [],
+    lastTime:    null,
+    rafId:       null,
+    simName:     'My Location',
+};
+
+// ─────────────────────────────────────────────
+//  CANVAS
+// ─────────────────────────────────────────────
+const canvas = document.getElementById('windCanvas');
+const ctx    = canvas.getContext('2d');
+
+function resize() {
+    const c = document.getElementById('canvas-container');
+    canvas.width  = c.clientWidth;
+    canvas.height = c.clientHeight;
+    initBoard();
+    initParticles();
+}
+window.addEventListener('resize', resize);
+
+// ─────────────────────────────────────────────
+//  GEOMETRY (recomputed each frame)
+// ─────────────────────────────────────────────
+function geo() {
+    const W = canvas.width, H = canvas.height;
+    const landH  = Math.max(40, Math.floor(H * 0.1));
+    const waterH = H - landH;
+
+    const clockX = W / 2;
+    const clockY = waterH / 2;
+
+    const wr = S.windAngle * Math.PI / 180;
+
+    // Wind blows FROM 12 TOWARD 6 = downward at windAngle=0, rotated by windAngle
+    const wdx = -Math.sin(wr);
+    const wdy =  Math.cos(wr);
+
+    // Perpendicular to wind (toward 3 when windAngle=0)
+    const px =  Math.cos(wr);
+    const py =  Math.sin(wr);
+
+    // Clock radius scales with lane spacing so the circle edge always sits on the
+    // tacking lines at the 3 and 9 positions.  The cap keeps hour labels and the
+    // "WIND" tag from being clipped — numbers sit ~24 px outside the circle, so
+    // we leave 52 px of margin on each side.
+    const baseR    = Math.min(W, waterH) * 0.32;        // radius at 100 % spacing
+    const maxR     = Math.min(W / 2, waterH / 2) - 52; // label-safe ceiling
+    const halfLane = S.spacing * baseR;                  // lanes expand freely
+    const clockR   = Math.min(halfLane, maxR);           // circle stops at ceiling
+
+    return { W, H, landH, waterH, clockR, clockX, clockY, wdx, wdy, px, py, halfLane };
+}
+
+// ─────────────────────────────────────────────
+//  PHYSICS
+// ─────────────────────────────────────────────
+// Returns boat speed in mph using iterative apparent-wind convergence.
+// boardAngle: 0=crosswind, +90=dead upwind, -90=dead downwind
+// TWA (true wind angle from dead upwind): 90° - boardAngle
+function calcSpeed() {
+    const twa_deg = 90 - S.boardAngle;
+
+    // Hard numerical guard only — the iterative solver's F_drive ≤ 0 check
+    // produces the natural speed taper as TWA tightens. The real no-go boundary
+    // for a wing (atan(CD/CL) ≈ 4°) is far tighter than the old 38° cliff.
+    if (twa_deg < 10 || twa_deg > 175) return 0;
+
+    const twa = twa_deg * Math.PI / 180;
+    const Vw  = S.windSpeed * 0.44704; // mph → m/s
+
+    const rho_air   = 1.225;
+    const CL        = 1.2;
+    const CD_wing   = 0.09;          // includes induced drag
+    const A_wing    = S.wingArea;
+
+    const rho_water = 1025;
+    let CD_w, A_w;
+    if (S.isForiling) {
+        CD_w = 0.025;
+        A_w  = S.foilArea / 10000;   // cm² → m²
+    } else {
+        CD_w = 0.11;
+        A_w  = (S.boardVolume / 100) * 0.52; // rough wetted area scale from volume
+    }
+
+    // Body drag through air (rider standing)
+    const riderKg    = S.riderWeight * 0.4536;
+    const CD_body    = 0.9;
+    const A_body     = 0.55;         // m² frontal area
+
+    let Vb = 0; // boat speed m/s, iterative
+
+    for (let i = 0; i < 100; i++) {
+        // Apparent wind in boat-centric frame
+        // forward = into the boat's bow; headwind minus boat speed
+        const Va_fwd  = Vw * Math.cos(twa) - Vb;
+        const Va_side = Vw * Math.sin(twa);
+        const Va      = Math.sqrt(Va_fwd * Va_fwd + Va_side * Va_side);
+        if (Va < 0.01) { Vb = 0; break; }
+
+        // AWA: apparent wind angle from boat's bow
+        const AWA = Math.atan2(Va_side, Va_fwd);
+
+        // Wing forces
+        const F_lift = 0.5 * rho_air * Va * Va * CL * A_wing;
+        const F_Dwing = 0.5 * rho_air * Va * Va * CD_wing * A_wing;
+
+        // Net driving force along boat heading (heel drag ignored for simplicity)
+        const Fd = F_lift * Math.sin(AWA) - F_Dwing * Math.cos(AWA);
+        if (Fd <= 0) { Vb = 0; break; }
+
+        // Resistance: water drag + air drag of body
+        const F_water = 0.5 * rho_water * Vb * Vb * CD_w * A_w;
+        const F_air   = 0.5 * rho_air   * Vb * Vb * CD_body * A_body;
+        const F_total_drag = F_water + F_air;
+
+        // Equilibrium: Fd = (0.5*rho_water*CD_w*A_w + 0.5*rho_air*CD_body*A_body) * Vb²
+        const K = 0.5 * rho_water * CD_w * A_w + 0.5 * rho_air * CD_body * A_body;
+        const Vb_eq = Math.sqrt(Fd / K);
+
+        const Vb_new = Vb * 0.35 + Vb_eq * 0.65;
+        if (Math.abs(Vb_new - Vb) < 0.0008) { Vb = Vb_new; break; }
+        Vb = Vb_new;
+    }
+
+    return Vb / 0.44704; // m/s → mph
+}
+
+// VMG: component of boat velocity pointing dead upwind (positive = making upwind progress)
+function calcVMG(speedKts) {
+    return speedKts * Math.sin(S.boardAngle * Math.PI / 180);
+}
+
+// ─────────────────────────────────────────────
+//  BOARD INIT / RESET
+// ─────────────────────────────────────────────
+function initBoard() {
+    const g = geo();
+    let bx = g.clockX;
+    let by = g.waterH - g.clockR * 0.4;
+
+    // The perpendicular distance of the starting point from the lane centre.
+    // bx === clockX so dx === 0; only the dy term matters.
+    const pd = (by - g.clockY) * g.py;
+
+    // When the wind clock is rotated, the lane boundaries tilt with it.
+    // The fixed shore-centre start can fall outside the lane at certain angles
+    // and narrow widths, causing the board to bounce every frame (degenerate).
+    // Slide the start along the perp axis to stay safely inside.
+    if (Math.abs(pd) > g.halfLane * 0.88) {
+        const shift = Math.sign(pd) * g.halfLane * 0.88 - pd;
+        bx += shift * g.px;
+        by += shift * g.py;
+    }
+
+    S.board.x    = bx;
+    S.board.y    = by;
+    S.board.tack = S.launchTack;
+    S.stopped    = false;
+    document.getElementById('stopped-overlay').style.display = 'none';
+}
+
+// ─────────────────────────────────────────────
+//  WIND PARTICLES
+// ─────────────────────────────────────────────
+function initParticles() {
+    const g = geo();
+    S.particles = [];
+    for (let i = 0; i < 70; i++) {
+        S.particles.push({
+            x:   Math.random() * g.W,
+            y:   Math.random() * g.waterH,
+            spd: 0.35 + Math.random() * 0.65,
+            opa: 0.15 + Math.random() * 0.45,
+            len: 14 + Math.random() * 22,
+        });
+    }
+}
+
+function updateParticles(dt, g) {
+    const base = S.windSpeed * 0.7 * 15; // px/s scale
+    for (const p of S.particles) {
+        p.x += g.wdx * base * p.spd * dt;
+        p.y += g.wdy * base * p.spd * dt;
+        if (p.y > g.waterH + p.len) p.y -= g.waterH + p.len * 2;
+        if (p.y < -p.len)           p.y += g.waterH + p.len * 2;
+        if (p.x > g.W + p.len)      p.x -= g.W + p.len * 2;
+        if (p.x < -p.len)           p.x += g.W + p.len * 2;
+    }
+}
+
+// ─────────────────────────────────────────────
+//  BOARD UPDATE
+// ─────────────────────────────────────────────
+const PX_PER_KNOT = 4; // animation scale
+
+function boardDir(tack, g) {
+    const br = S.boardAngle * Math.PI / 180;
+    // Crosswind component (tack determines left or right)
+    const hx = tack * g.px * Math.cos(br) + (-g.wdx) * Math.sin(br);
+    const hy = tack * g.py * Math.cos(br) + (-g.wdy) * Math.sin(br);
+    return { hx, hy };
+}
+
+function updateBoard(dt, g) {
+    if (S.boatSpeed <= 0) return;
+
+    const { hx, hy } = boardDir(S.board.tack, g);
+    const spx = S.boatSpeed * PX_PER_KNOT;
+
+    let nx = S.board.x + hx * spx * dt;
+    let ny = S.board.y + hy * spx * dt;
+
+    // Distance from center along the perpendicular axis (across wind)
+    const dx = nx - g.clockX;
+    const dy = ny - g.clockY;
+    const pd = dx * g.px + dy * g.py;
+
+    if (Math.abs(pd) >= g.halfLane) {
+        // Bounce: flip tack
+        S.board.tack *= -1;
+        // Clamp to boundary
+        const wd = dx * g.wdx + dy * g.wdy;
+        const clamped = Math.sign(pd) * g.halfLane * 0.998;
+        nx = g.clockX + clamped * g.px + wd * g.wdx;
+        ny = g.clockY + clamped * g.py + wd * g.wdy;
+    }
+
+    S.board.x = nx;
+    S.board.y = ny;
+
+    // Stop conditions
+    let reason = null;
+    if (ny >= g.waterH - 5)     reason = 'Board returned to land!';
+    else if (ny <= 5)            reason = 'Made it upwind! 🎉';
+    else if (nx <= 0 || nx >= g.W) reason = 'Board went off screen';
+
+    if (reason) {
+        S.stopped = true;
+        S.playing = false;
+        document.getElementById('playPauseBtn').textContent = '↺  Restart';
+        const ov = document.getElementById('stopped-overlay');
+        document.getElementById('stopped-reason').textContent = reason;
+        ov.style.display = 'block';
+        setTimeout(() => ov.style.display = 'none', 4000);
+    }
+}
+
+// ─────────────────────────────────────────────
+//  ANIMATION LOOP
+// ─────────────────────────────────────────────
+function togglePlay() {
+    if (S.stopped) {
+        initBoard();
+        S.playing = false;
+    }
+    S.playing = !S.playing;
+    document.getElementById('playPauseBtn').textContent = S.playing ? '⏸  Pause' : '▶  Play';
+    if (S.playing && !S.rafId) {
+        S.lastTime = null;
+        S.rafId = requestAnimationFrame(loop);
+    }
+}
+
+function loop(ts) {
+    S.rafId = null;
+    if (!S.lastTime) S.lastTime = ts;
+    const dt = Math.min((ts - S.lastTime) / 1000, 0.05);
+    S.lastTime = ts;
+
+    S.boatSpeed = calcSpeed();
+    S.vmg       = calcVMG(S.boatSpeed);
+
+    const g = geo();
+    updateParticles(dt, g);
+    if (S.playing && !S.stopped) updateBoard(dt, g);
+
+    draw(g);
+    updateUI();
+
+    S.rafId = requestAnimationFrame(loop);
+}
+
+// ─────────────────────────────────────────────
+//  DRAWING
+// ─────────────────────────────────────────────
+function draw(g) {
+    ctx.clearRect(0, 0, g.W, g.H);
+    drawWater(g);
+    drawParticles(g);
+    drawTackLines(g);
+    drawClock(g);
+    drawProjected(g);
+    drawBoard(g);
+    drawLand(g);
+    drawHUD(g);
+}
+
+function drawWater(g) {
+    const gr = ctx.createLinearGradient(0, 0, 0, g.waterH);
+    gr.addColorStop(0,   '#06213d');
+    gr.addColorStop(0.5, '#093055');
+    gr.addColorStop(1,   '#0a3d60');
+    ctx.fillStyle = gr;
+    ctx.fillRect(0, 0, g.W, g.waterH);
+}
+
+function drawLand(g) {
+    const gr = ctx.createLinearGradient(0, g.waterH, 0, g.H);
+    gr.addColorStop(0,   '#4a7a22');
+    gr.addColorStop(0.5, '#6a8a32');
+    gr.addColorStop(1,   '#8a6a28');
+    ctx.fillStyle = gr;
+    ctx.fillRect(0, g.waterH, g.W, g.landH);
+
+    // shoreline
+    ctx.strokeStyle = '#f0d060';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(0, g.waterH);
+    ctx.lineTo(g.W, g.waterH);
+    ctx.stroke();
+
+    // LAND label
+    ctx.fillStyle = '#f0d060';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚓ LAUNCH / LAND', g.W / 2, g.waterH + g.landH / 2);
+}
+
+function drawParticles(g) {
+    const ha = Math.atan2(g.wdy, g.wdx);
+    for (const p of S.particles) {
+        if (p.y > g.waterH || p.y < 0) continue;
+        const tx = p.x - g.wdx * p.len;
+        const ty = p.y - g.wdy * p.len;
+
+        ctx.globalAlpha = p.opa * Math.min(1, S.windSpeed / 14); // 14 mph ≈ threshold for full opacity
+        ctx.strokeStyle = '#a0d8f0';
+        ctx.lineWidth   = 1;
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+
+        // tiny arrowhead
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - 6 * Math.cos(ha - 0.45), p.y - 6 * Math.sin(ha - 0.45));
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - 6 * Math.cos(ha + 0.45), p.y - 6 * Math.sin(ha + 0.45));
+        ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+}
+
+function drawTackLines(g) {
+    ctx.save();
+    ctx.setLineDash([9, 5]);
+    ctx.lineWidth = 2;
+
+    for (const side of [-1, 1]) {
+        const cx = g.clockX + side * g.px * g.halfLane;
+        const cy = g.clockY + side * g.py * g.halfLane;
+        ctx.strokeStyle = side === 1
+            ? 'rgba(255, 220, 50, 0.65)'
+            : 'rgba(100, 220, 255, 0.65)';
+        ctx.beginPath();
+        ctx.moveTo(cx + g.wdx * 2000, cy + g.wdy * 2000);
+        ctx.lineTo(cx - g.wdx * 2000, cy - g.wdy * 2000);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawClock(g) {
+    const { clockX: cx, clockY: cy, clockR: r } = g;
+
+    // Subtle outer ring
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Cross-wind axis (3-9 line)
+    ctx.strokeStyle = 'rgba(80,200,255,0.35)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - g.px * r, cy - g.py * r);
+    ctx.lineTo(cx + g.px * r, cy + g.py * r);
+    ctx.stroke();
+
+    // Wind axis (12-6 line)
+    ctx.strokeStyle = 'rgba(255,80,80,0.25)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - g.wdx * r, cy - g.wdy * r);
+    ctx.lineTo(cx + g.wdx * r, cy + g.wdy * r);
+    ctx.stroke();
+
+    // Hour numbers + ticks
+    for (let h = 1; h <= 12; h++) {
+        const angDeg = (h / 12) * 360 - 90 + S.windAngle;
+        const ang    = angDeg * Math.PI / 180;
+        const is39   = h === 3 || h === 9;
+        const is126  = h === 12 || h === 6;
+        const inner  = r * (is126 || is39 ? 0.88 : 0.92);
+        const numR   = r + (is126 || is39 ? 20 : 15);
+
+        // Tick
+        ctx.strokeStyle = is126 ? 'rgba(255,255,255,0.7)'
+                        : is39  ? 'rgba(80,200,255,0.7)'
+                        :         'rgba(255,255,255,0.25)';
+        ctx.lineWidth   = is126 || is39 ? 2 : 1;
+        ctx.beginPath();
+        ctx.moveTo(cx + inner * Math.cos(ang), cy + inner * Math.sin(ang));
+        ctx.lineTo(cx + r     * Math.cos(ang), cy + r     * Math.sin(ang));
+        ctx.stroke();
+
+        // Number
+        ctx.font         = `${is126 || is39 ? 'bold ' : ''}${is126 || is39 ? 13 : 11}px sans-serif`;
+        ctx.fillStyle    = h === 12 ? '#ff7070'
+                         : h === 6  ? '#ff9040'
+                         : is39     ? '#50ccff'
+                         :            'rgba(255,255,255,0.42)';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(h), cx + numR * Math.cos(ang), cy + numR * Math.sin(ang));
+    }
+
+    // Wind arrow 12→6
+    const arrowHead = { x: cx + g.wdx * r * 0.72, y: cy + g.wdy * r * 0.72 };
+    const arrowTail = { x: cx - g.wdx * r * 0.72, y: cy - g.wdy * r * 0.72 };
+    const ha        = Math.atan2(g.wdy, g.wdx);
+
+    ctx.strokeStyle = '#ff5555';
+    ctx.lineWidth   = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(arrowTail.x, arrowTail.y);
+    ctx.lineTo(arrowHead.x, arrowHead.y);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ff5555';
+    ctx.beginPath();
+    ctx.moveTo(arrowHead.x, arrowHead.y);
+    ctx.lineTo(arrowHead.x - 11 * Math.cos(ha - 0.4), arrowHead.y - 11 * Math.sin(ha - 0.4));
+    ctx.lineTo(arrowHead.x - 11 * Math.cos(ha + 0.4), arrowHead.y - 11 * Math.sin(ha + 0.4));
+    ctx.closePath();
+    ctx.fill();
+
+    // "WIND" label near 12
+    ctx.fillStyle    = '#ff7070';
+    ctx.font         = 'bold 10px sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    const lx = cx - g.wdx * (r + 36);
+    const ly = cy - g.wdy * (r + 36);
+    ctx.fillText('WIND', lx, ly);
+}
+
+// Projected tacking path — two traces from the board's position:
+//   forward  (toward destination / top of screen)  bright
+//   backward (toward shore / bottom of screen)      dimmer
+// Together they fill the entire lane. Canvas clips off-screen segments.
+function drawProjected(g) {
+    if (S.stopped || S.boatSpeed <= 0) return;
+
+    // Guard: board must be inside the lane or the trace degenerates
+    const pd0 = (S.board.x - g.clockX) * g.px + (S.board.y - g.clockY) * g.py;
+    if (Math.abs(pd0) >= g.halfLane) return;
+
+    ctx.save();
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7, 6]);
+    ctx.lineJoin  = 'round';
+
+    const STEP       = 4;
+    const MAX_STEPS  = 8000;
+    const MAX_BOUNCES = 50;
+
+    // ── helper: trace one direction ──────────────────────────────────────────
+    // sign: +1 = forward (subtract board velocity to go upwind)
+    //       -1 = backward (reverse direction, tracing back toward shore)
+    // For the backward trace the tack sense reverses automatically because
+    // subtracting the heading vector mirrors the perpendicular component.
+    function trace(sign, color) {
+        let x = S.board.x, y = S.board.y, tack = S.board.tack;
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        let bounces = 0;
+        for (let s = 0; s < MAX_STEPS && bounces < MAX_BOUNCES; s++) {
+            const { hx, hy } = boardDir(tack, g);
+            x += sign * hx * STEP;
+            y += sign * hy * STEP;
+            ctx.lineTo(x, y);          // canvas clips off-screen portions for us
+            if (Math.abs((x - g.clockX) * g.px + (y - g.clockY) * g.py) >= g.halfLane) {
+                tack *= -1;
+                bounces++;
+            }
+            // Stop when well outside the water area — canvas already clipped
+            // any partially off-screen segment, so no visible gap at the edge.
+            if (y >= g.waterH + 20) break;   // hit shore (or well past it)
+            if (y < -(g.waterH))  break;      // well above screen, won't return
+            if (x < -(g.W)  || x > g.W * 2) break; // far off side (angled wind)
+        }
+        ctx.stroke();
+    }
+
+    trace(+1, 'rgba(255, 255, 100, 0.75)'); // forward  — bright
+    trace(-1, 'rgba(255, 255, 100, 0.35)'); // backward — dim
+
+    ctx.restore();
+}
+
+function drawBoard(g) {
+    const { x, y } = S.board;
+    if (y >= g.waterH || y <= 0) return;
+
+    const { hx, hy } = boardDir(S.board.tack, g);
+    const heading     = Math.atan2(hy, hx);
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(heading + Math.PI / 2); // board nose points forward
+
+    const L = 28, W2 = 7;
+
+    // Board body
+    ctx.fillStyle = '#e8e8e8';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, W2, L, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Stripe / deck color
+    ctx.fillStyle = '#3080e0';
+    ctx.beginPath();
+    ctx.ellipse(0, -L * 0.15, W2 * 0.6, L * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Fin
+    ctx.fillStyle = '#b0b0b0';
+    ctx.beginPath();
+    ctx.moveTo(0, L * 0.65);
+    ctx.lineTo(-7, L * 1.15);
+    ctx.lineTo(0, L * 0.88);
+    ctx.fill();
+
+    if (S.isForiling) {
+        // Foil mast (below board, toward bottom of shape)
+        ctx.strokeStyle = '#909090';
+        ctx.lineWidth   = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 4);
+        ctx.lineTo(0, L * 0.55);
+        ctx.stroke();
+        // Foil horizontal wings
+        ctx.beginPath();
+        ctx.moveTo(-16, L * 0.55);
+        ctx.lineTo( 16, L * 0.55);
+        ctx.stroke();
+        // Stabilizer
+        ctx.beginPath();
+        ctx.moveTo(-8, L * 0.45);
+        ctx.lineTo( 8, L * 0.45);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+
+    // Heading arrow
+    const arrowEnd = { x: x + hx * 44, y: y + hy * 44 };
+    ctx.strokeStyle = '#ffe040';
+    ctx.lineWidth   = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(arrowEnd.x, arrowEnd.y);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffe040';
+    ctx.beginPath();
+    ctx.moveTo(arrowEnd.x, arrowEnd.y);
+    ctx.lineTo(arrowEnd.x - 9 * Math.cos(heading - 0.4), arrowEnd.y - 9 * Math.sin(heading - 0.4));
+    ctx.lineTo(arrowEnd.x - 9 * Math.cos(heading + 0.4), arrowEnd.y - 9 * Math.sin(heading + 0.4));
+    ctx.closePath();
+    ctx.fill();
+}
+
+// On-canvas HUD: angle of attack info box
+function drawHUD(g) {
+    const pad = 10, bw = 175, bh = 72;
+    const bx = pad, by = pad;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.62)';
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 7);
+    ctx.fill();
+
+    ctx.fillStyle    = '#4ecdc4';
+    ctx.font         = 'bold 10px sans-serif';
+    ctx.textAlign    = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('ANGLE OF ATTACK', bx + 8, by + 8);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font      = 'bold 24px sans-serif';
+    ctx.fillText(`${S.boardAngle >= 0 ? '+' : ''}${S.boardAngle.toFixed(0)}°`, bx + 8, by + 22);
+
+    ctx.fillStyle = '#7090b0';
+    ctx.font      = '10px sans-serif';
+    const twa     = (90 - S.boardAngle).toFixed(0);
+    ctx.fillText(`TWA from upwind: ${twa}°`, bx + 8, by + 50);
+    ctx.fillText(`Heading: ${clockHeading(S.boardAngle, S.board.tack)}`, bx + 8, by + 62);
+}
+
+// ─────────────────────────────────────────────
+//  UI HELPERS
+// ─────────────────────────────────────────────
+function fmtClockHour(h) {
+    h = ((h - 1 + 12) % 12) + 1; // normalise 1-12
+    const hh  = Math.floor(h);
+    const min = Math.round((h % 1) * 60);
+    return min ? `${hh}:${String(min).padStart(2,'0')}` : `${hh}:00`;
+}
+
+// Clock heading for current tack
+function clockHeading(boardAngle, tack) {
+    if (boardAngle > 80)  return '~12:00 (no-go zone!)';
+    if (boardAngle < -80) return '~6:00 (downwind)';
+    if (tack > 0) {
+        const h = 3 - boardAngle / 30;
+        return fmtClockHour(h);
+    } else {
+        const h = 9 + boardAngle / 30;
+        return fmtClockHour(h);
+    }
+}
+
+function updateUI() {
+    document.getElementById('speedDisp').textContent      = S.boatSpeed.toFixed(1);
+    document.getElementById('vmgDisp').textContent        = Math.max(0, S.vmg).toFixed(1);
+    document.getElementById('windAngleDisp').textContent  = `${S.windAngle}°`;
+    document.getElementById('boardAngleDisp').textContent = `${S.boardAngle >= 0 ? '+' : ''}${S.boardAngle}°`;
+
+    const portHead = clockHeading(S.boardAngle, -1);
+    const stbdHead = clockHeading(S.boardAngle,  1);
+    document.getElementById('clockPosDisp').textContent   = `${portHead} / ${stbdHead}`;
+    document.getElementById('spacingDisp').textContent    = `${Math.round(S.spacing * 100)}%`;
+}
+
+// ─────────────────────────────────────────────
+//  CONTROL HANDLERS
+// ─────────────────────────────────────────────
+function adjustWind(delta) {
+    S.windAngle = (S.windAngle + delta + 360) % 360;
+}
+
+function adjustAngle(delta) {
+    S.boardAngle = Math.max(-85, Math.min(85, S.boardAngle + delta));
+}
+
+function adjustSpacing(delta) {
+    S.spacing = Math.max(0.12, Math.min(2.6, S.spacing + delta));
+}
+
+function setLaunchTack(tack) {
+    S.launchTack = tack;
+    document.getElementById('tackPortBtn').classList.toggle('btn-active', tack === -1);
+    document.getElementById('tackStbdBtn').classList.toggle('btn-active', tack ===  1);
+    // If board is at starting position (not mid-run), flip it immediately
+    if (!S.playing && !S.stopped) initBoard();
+}
+
+function syncWindSpeed(val) {
+    S.windSpeed = Math.max(1, Math.min(100, parseFloat(val) || 15));
+    document.getElementById('windSpeedInput').value  = S.windSpeed;
+    document.getElementById('windSpeedSlider').value = S.windSpeed;
+}
+
+function updateSetup() {
+    S.isForiling   = document.getElementById('foilingChk').checked;
+    S.wingArea     = parseFloat(document.getElementById('wingAreaInput').value)  || 6.0;
+    S.riderWeight  = parseFloat(document.getElementById('riderWeightInput').value) || 200;
+    S.foilArea     = parseFloat(document.getElementById('foilAreaInput').value)  || 1500;
+    S.boardVolume  = parseFloat(document.getElementById('boardVolInput').value)  || 100;
+
+    document.getElementById('foilRow').style.display  = S.isForiling ? '' : 'none';
+    document.getElementById('boardRow').style.display = S.isForiling ? 'none' : '';
+}
+
+// ─────────────────────────────────────────────
+//  EXPORT / IMPORT
+// ─────────────────────────────────────────────
+function exportSim() {
+    const sim = {
+        name:        document.getElementById('simNameInput').value || 'My Location',
+        windAngle:   S.windAngle,
+        boardAngle:  S.boardAngle,
+        spacing:     S.spacing,
+        windSpeed:   S.windSpeed,
+        launchTack:  S.launchTack,
+        isForiling:  S.isForiling,
+        wingArea:    S.wingArea,
+        riderWeight: S.riderWeight,
+        foilArea:    S.foilArea,
+        boardVolume: S.boardVolume,
+    };
+    const blob = new Blob([JSON.stringify(sim, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = (sim.name.replace(/[^a-z0-9]/gi, '_') || 'simulation') + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importSim(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const sim = JSON.parse(e.target.result);
+            S.windAngle   = sim.windAngle   ?? 0;
+            S.boardAngle  = sim.boardAngle  ?? 45;
+            S.spacing     = sim.spacing     ?? 1.0;
+            S.windSpeed   = sim.windSpeed   ?? 15;
+            S.launchTack  = sim.launchTack  ?? 1;
+            S.isForiling  = sim.isForiling  ?? true;
+            S.wingArea    = sim.wingArea    ?? 6.0;
+            S.riderWeight = sim.riderWeight ?? 200;
+            S.foilArea    = sim.foilArea    ?? 1500;
+            S.boardVolume = sim.boardVolume ?? 100;
+
+            document.getElementById('simNameInput').value       = sim.name || '';
+            document.getElementById('windSpeedInput').value     = S.windSpeed;
+            document.getElementById('windSpeedSlider').value    = S.windSpeed;
+            document.getElementById('foilingChk').checked       = S.isForiling;
+            document.getElementById('wingAreaInput').value      = S.wingArea;
+            document.getElementById('riderWeightInput').value   = S.riderWeight;
+            document.getElementById('foilAreaInput').value      = S.foilArea;
+            document.getElementById('boardVolInput').value      = S.boardVolume;
+
+            // Sync launch tack toggle buttons
+            document.getElementById('tackPortBtn').classList.toggle('btn-active', S.launchTack === -1);
+            document.getElementById('tackStbdBtn').classList.toggle('btn-active', S.launchTack ===  1);
+
+            updateSetup();
+            initBoard();
+        } catch (err) {
+            alert('Could not load simulation: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+    input.value = '';
+}
+
+// ─────────────────────────────────────────────
+//  BOOT
+// ─────────────────────────────────────────────
+resize();
+updateSetup();
+S.rafId = requestAnimationFrame(loop);
+</script>
+</body>
+</html>
