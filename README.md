@@ -26,6 +26,9 @@ Imagine a clock face lying flat on the surface of the water. The wind always blo
 
 Your board can reach almost any direction — **but not straight into the wind**. There is a "no-go zone" of roughly 38° on either side of 12 o'clock where the wind cannot push you forward no matter what you do.
 
+<img width="1665" height="959" alt="image" src="https://github.com/user-attachments/assets/3ed140f6-ebf2-4aed-88b1-9913313db688" />
+
+
 ### Going upwind
 
 To reach a destination that is directly upwind (at 12 o'clock), you cannot go straight there. Instead you zigzag:
