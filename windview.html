@@ -1015,8 +1015,8 @@ function drawClock(g) {
     }
 
     // Wind arrow 12→6
-    const arrowHead = { x: cx + g.wdx * r * 0.72, y: cy + g.wdy * r * 0.72 };
-    const arrowTail = { x: cx - g.wdx * r * 0.72, y: cy - g.wdy * r * 0.72 };
+    const arrowHead = { x: cx + g.wdx * r * 0.36, y: cy + g.wdy * r * 0.36 };
+    const arrowTail = { x: cx - g.wdx * r * 0.36, y: cy - g.wdy * r * 0.36 };
     const ha        = Math.atan2(g.wdy, g.wdx);
 
     ctx.strokeStyle = '#ff5555';
@@ -1041,7 +1041,7 @@ function drawClock(g) {
     ctx.textBaseline = 'middle';
     const lx = cx - g.wdx * (r + 36);
     const ly = cy - g.wdy * (r + 36);
-    ctx.fillText('WIND', lx, ly);
+    ctx.fillText(`WIND  ${S.windSpeed.toFixed(0)} mph`, lx, ly);
 }
 
 // Projected tacking path — two traces from the board's position:
@@ -1170,6 +1170,47 @@ function drawBoard(g) {
     ctx.lineTo(arrowEnd.x - 9 * Math.cos(heading + 0.4), arrowEnd.y - 9 * Math.sin(heading + 0.4));
     ctx.closePath();
     ctx.fill();
+
+    // Actual speed, labeled just ahead of the board, offset to the side of the
+    // heading arrow (and rotated parallel to it) so it doesn't sit on the line
+    const perpX = -hy, perpY = hx;
+    const speedLabelX = arrowEnd.x + hx * 14 + perpX * 12;
+    const speedLabelY = arrowEnd.y + hy * 14 + perpY * 12;
+    ctx.save();
+    ctx.translate(speedLabelX, speedLabelY);
+    ctx.rotate(heading > Math.PI / 2 || heading < -Math.PI / 2 ? heading + Math.PI : heading);
+    ctx.fillStyle    = '#ffe040';
+    ctx.font         = 'bold 11px sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${S.boatSpeed.toFixed(1)} mph`, 0, 0);
+    ctx.restore();
+
+    // VMG arrow, pointing dead upwind (toward 12 o'clock) from the board
+    const vmgLen  = 44;
+    const vx = -g.wdx, vy = -g.wdy; // upwind unit vector (opposite the wind's travel direction)
+    const vmgEnd  = { x: x + vx * vmgLen, y: y + vy * vmgLen };
+    const vmgAng  = Math.atan2(vy, vx);
+
+    ctx.strokeStyle = '#4ecdc4';
+    ctx.lineWidth   = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(vmgEnd.x, vmgEnd.y);
+    ctx.stroke();
+
+    ctx.fillStyle = '#4ecdc4';
+    ctx.beginPath();
+    ctx.moveTo(vmgEnd.x, vmgEnd.y);
+    ctx.lineTo(vmgEnd.x - 9 * Math.cos(vmgAng - 0.4), vmgEnd.y - 9 * Math.sin(vmgAng - 0.4));
+    ctx.lineTo(vmgEnd.x - 9 * Math.cos(vmgAng + 0.4), vmgEnd.y - 9 * Math.sin(vmgAng + 0.4));
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.font         = 'bold 11px sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`VMG ${Math.max(0, S.vmg).toFixed(1)}`, vmgEnd.x + vx * 16, vmgEnd.y + vy * 16);
 }
 
 // On-canvas HUD: angle of attack info box
