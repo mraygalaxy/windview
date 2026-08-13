@@ -436,6 +436,89 @@ function resize() {
 window.addEventListener('resize', resize);
 
 // ─────────────────────────────────────────────
+//  MOUSE DRAG — rotate wind clock
+// ─────────────────────────────────────────────
+// Dragging anywhere on the canvas rotates the wind clock like a dial: the
+// rotation tracks the angle swept around the clock center between mouse
+// moves, so it feels like turning the clock face itself rather than a
+// simple left/right slider.
+let dragging = false, dragLastAngle = 0;
+
+function pointerAngle(evt) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = evt.clientX - rect.left;
+    const my = evt.clientY - rect.top;
+    const g  = geo();
+    return Math.atan2(my - g.clockY, mx - g.clockX);
+}
+
+// Ctrl+drag adjusts angle of attack instead of rotating the clock: dragging
+// toward the VMG arrow's direction (dead upwind) increases angle of attack,
+// dragging away decreases it. Measured by projecting mouse movement onto the
+// upwind unit vector, so only movement toward/away from upwind counts.
+let dragMode = null; // 'wind' | 'angle'
+let dragLastX = 0, dragLastY = 0;
+const ANGLE_DRAG_PX_PER_DEG = 4;
+
+canvas.addEventListener('mousedown', e => {
+    dragging = true;
+    if (e.ctrlKey) {
+        dragMode = 'angle';
+        dragLastX = e.clientX;
+        dragLastY = e.clientY;
+        canvas.style.cursor = 'ns-resize';
+    } else {
+        dragMode = 'wind';
+        dragLastAngle = pointerAngle(e);
+        canvas.style.cursor = 'grabbing';
+    }
+});
+
+window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+
+    if (dragMode === 'angle') {
+        const g  = geo();
+        const ux = -g.wdx, uy = -g.wdy; // upwind unit vector (VMG arrow direction)
+        const dx = e.clientX - dragLastX;
+        const dy = e.clientY - dragLastY;
+        const proj = dx * ux + dy * uy; // px moved toward upwind
+        S.boardAngle = Math.max(-85, Math.min(85, S.boardAngle + proj / ANGLE_DRAG_PX_PER_DEG));
+        dragLastX = e.clientX;
+        dragLastY = e.clientY;
+        updateUI();
+        return;
+    }
+
+    const ang = pointerAngle(e);
+    let deltaDeg = (ang - dragLastAngle) * 180 / Math.PI;
+    // Normalize to the shortest rotation (handles the -180/180 wraparound).
+    deltaDeg = ((deltaDeg + 180) % 360 + 360) % 360 - 180;
+    S.windAngle = (S.windAngle + deltaDeg + 360) % 360;
+    dragLastAngle = ang;
+    updateUI();
+});
+
+window.addEventListener('mouseup', () => {
+    dragging = false;
+    dragMode = null;
+    canvas.style.cursor = 'grab';
+});
+
+canvas.style.cursor = 'grab';
+
+// ─────────────────────────────────────────────
+//  SCROLL WHEEL — zoom lane / clock size
+// ─────────────────────────────────────────────
+canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    // Negative deltaY = scroll up/away = zoom in = wider lane.
+    const factor = 0.0015;
+    adjustSpacing(-e.deltaY * factor);
+    updateUI();
+}, { passive: false });
+
+// ─────────────────────────────────────────────
 //  GEOMETRY (recomputed each frame)
 // ─────────────────────────────────────────────
 function geo() {
