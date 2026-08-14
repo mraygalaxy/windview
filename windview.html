@@ -791,6 +791,7 @@ function draw(g) {
     drawTackLines(g);
     drawClock(g);
     drawProjected(g);
+    drawAOAIndicator(g);
     drawBoard(g);
     drawLand(g);
     drawPerfChart(g);
@@ -1204,6 +1205,54 @@ function drawProjected(g) {
     ctx.restore();
 }
 
+// A crosswind (3-9-parallel) line through the board, plus an arc between it
+// and the board's heading — the same angle-of-attack shown numerically in the
+// HUD, drawn geometrically at the board so the angle is visible in context.
+function drawAOAIndicator(g) {
+    const { x, y } = S.board;
+    if (y >= g.waterH || y <= 0) return;
+
+    ctx.save();
+
+    // Duplicate crosswind line, parallel to the 3-9 axis, through the board
+    ctx.setLineDash([9, 5]);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(80,200,255,0.45)';
+    ctx.beginPath();
+    ctx.moveTo(x - g.px * 2000, y - g.py * 2000);
+    ctx.lineTo(x + g.px * 2000, y + g.py * 2000);
+    ctx.stroke();
+
+    // Arc between that crosswind line (in the tack's direction) and the
+    // board's heading — this angle is exactly the angle of attack.
+    const tack = S.board.tack;
+    const crosswindAngle = Math.atan2(tack * g.py, tack * g.px);
+    const { hx, hy } = boardDir(tack, g);
+    const headingAngle = Math.atan2(hy, hx);
+
+    let diff = headingAngle - crosswindAngle;
+    diff = ((diff + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+
+    const R = 34;
+    ctx.setLineDash([]);
+    ctx.strokeStyle = '#ffcc00';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, R, crosswindAngle, crosswindAngle + diff, diff < 0);
+    ctx.stroke();
+
+    // Angle label, placed just outside the arc at its midpoint
+    const midAngle = crosswindAngle + diff / 2;
+    const labelR = R + 16;
+    ctx.fillStyle    = '#ffcc00';
+    ctx.font         = 'bold 12px sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${Math.abs(S.boardAngle).toFixed(0)}°`, x + labelR * Math.cos(midAngle), y + labelR * Math.sin(midAngle));
+
+    ctx.restore();
+}
+
 function drawBoard(g) {
     const { x, y } = S.board;
     if (y >= g.waterH || y <= 0) return;
@@ -1279,8 +1328,8 @@ function drawBoard(g) {
     // Actual speed, labeled just ahead of the board, offset to the side of the
     // heading arrow (and rotated parallel to it) so it doesn't sit on the line
     const perpX = -hy, perpY = hx;
-    const speedLabelX = arrowEnd.x + hx * 14 + perpX * 12;
-    const speedLabelY = arrowEnd.y + hy * 14 + perpY * 12;
+    const speedLabelX = arrowEnd.x + hx * 60 + perpX * 12;
+    const speedLabelY = arrowEnd.y + hy * 60 + perpY * 12;
     ctx.save();
     ctx.translate(speedLabelX, speedLabelY);
     ctx.rotate(heading > Math.PI / 2 || heading < -Math.PI / 2 ? heading + Math.PI : heading);
