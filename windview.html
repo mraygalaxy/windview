@@ -250,7 +250,10 @@ label { cursor: pointer; font-size: 12px; }
     <div class="panel-title">⛵ WINDVIEW</div>
 
     <!-- Play / Pause -->
-    <button class="btn-primary" id="playPauseBtn" onclick="togglePlay()">▶&nbsp; Play</button>
+    <div style="display:flex; gap:5px">
+        <button class="btn-primary" id="playPauseBtn" onclick="togglePlay()" style="flex:1">▶&nbsp; Play</button>
+        <button class="btn-primary" id="resetBtn" onclick="resetSim()" style="flex:1; display:none">↺&nbsp; Reset</button>
+    </div>
 
     <!-- Performance Stats -->
     <div class="ctrl-group">
@@ -692,7 +695,7 @@ function updateParticles(dt, g) {
 // ─────────────────────────────────────────────
 //  BOARD UPDATE
 // ─────────────────────────────────────────────
-const PX_PER_KNOT = 4; // animation scale
+const PX_PER_KNOT = 2.4; // animation scale
 
 function boardDir(tack, g) {
     const br = S.boardAngle * Math.PI / 180;
@@ -739,6 +742,7 @@ function updateBoard(dt, g) {
         S.stopped = true;
         S.playing = false;
         document.getElementById('playPauseBtn').textContent = '↺  Restart';
+        document.getElementById('resetBtn').style.display = 'none';
         const ov = document.getElementById('stopped-overlay');
         document.getElementById('stopped-reason').textContent = reason;
         ov.style.display = 'block';
@@ -756,10 +760,20 @@ function togglePlay() {
     }
     S.playing = !S.playing;
     document.getElementById('playPauseBtn').textContent = S.playing ? '⏸  Pause' : '▶  Play';
+    document.getElementById('resetBtn').style.display = S.playing ? '' : 'none';
     if (S.playing && !S.rafId) {
         S.lastTime = null;
         S.rafId = requestAnimationFrame(loop);
     }
+}
+
+// Sends the board back to its launch position without stopping playback —
+// available once Play has been pressed, alongside Pause.
+function resetSim() {
+    initBoard();
+    S.playing = false;
+    document.getElementById('playPauseBtn').textContent = '▶  Play';
+    document.getElementById('resetBtn').style.display = 'none';
 }
 
 function loop(ts) {
@@ -828,7 +842,24 @@ function drawLand(g) {
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('⚓ LAUNCH / LAND', g.W / 2, g.waterH + g.landH / 2);
+    ctx.fillText('⚓ LAUNCH / LAND / SHORE', g.W / 2, g.waterH + g.landH / 2);
+
+    // Mouse legend — right side of the land strip, before the side panel
+    const legendLines = [
+        'Mouse actions:',
+        '1. Drag mouse = rotate wind clock',
+        '2. CTRL + Drag mouse = change angle of attack',
+        '3. Scroll wheel = zoom wind clock',
+    ];
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    const legendLineH = 13;
+    const legendTop = g.waterH + g.landH / 2 - (legendLines.length - 1) * legendLineH / 2;
+    legendLines.forEach((line, i) => {
+        ctx.fillStyle = i === 0 ? '#f0d060' : '#fff8e0';
+        ctx.fillText(line, g.W - 12, legendTop + i * legendLineH);
+    });
 }
 
 // Performance chart: Speed & VMG vs. Angle of Attack, overlaid near the shore.
@@ -1222,6 +1253,21 @@ function drawAOAIndicator(g) {
     ctx.moveTo(x - g.px * 2000, y - g.py * 2000);
     ctx.lineTo(x + g.px * 2000, y + g.py * 2000);
     ctx.stroke();
+
+    // "3" and "9" labels on this line, just outside the lane boundaries —
+    // same font/color as the clock's 3 and 9, and they track the board every
+    // frame since this whole function re-runs each frame during playback.
+    const pdBoard = (x - g.clockX) * g.px + (y - g.clockY) * g.py;
+    const tPlus   = g.halfLane - pdBoard;  // crossing toward 3 (+px,+py side)
+    const tMinus  = -g.halfLane - pdBoard; // crossing toward 9 (-px,-py side)
+    const labelMargin = 20;
+
+    ctx.font         = 'bold 26px sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle    = '#50ccff';
+    ctx.fillText('3', x + (tPlus + labelMargin) * g.px, y + (tPlus + labelMargin) * g.py);
+    ctx.fillText('9', x + (tMinus - labelMargin) * g.px, y + (tMinus - labelMargin) * g.py);
 
     // Arc between that crosswind line (in the tack's direction) and the
     // board's heading — this angle is exactly the angle of attack.
